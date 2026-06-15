@@ -5,6 +5,7 @@ from fastapi import UploadFile
 from sqlalchemy.orm import Session
 from common.base.baseMysql import BaseMySQLService
 from domains.users.user_model import UserModel, UploadFileModel
+from common.utils.compressor import compress_file
 
 TEMP_DIR = "static/temp"
 UPLOAD_DIR = "static/uploads"
@@ -115,36 +116,51 @@ class UploadService:
                             "Security Violation: Malicious script injection or embedded XSS detected within file bytes."
                         )
 
-            shutil.move(temp_path, permanent_path)
-            file_size_formatted = (
-                f"{round(os.path.getsize(permanent_path) / 1024, 2)} KB"
-            )
+                compression_result = compress_file(file_data, clean_filename)
 
-            existing_file = self._upload_repo.find_one(db, {"user_id": user_id})
+                if compression_result["is_compressed"]:
+                    with open(temp_path, "wb") as temp_write:
+                        temp_write.write(compression_result["buffer"])
 
-            if existing_file:
-                if os.path.exists(existing_file.file_path):
-                    try:
-                        os.remove(existing_file.file_path)
-                    except OSError:
-                        pass
+                    if compression_result["encoding"] == "gzip":
+                        clean_filename = clean_filename + ".gz"
+                        unique_filename = unique_filename + ".gz"
+                        permanent_path = os.path.join(UPLOAD_DIR, unique_filename)
+                        file.content_type = "application/gzip"
 
-                update_payload = {
-                    "filename": clean_filename,
-                    "file_path": permanent_path,
-                    "file_type": file.content_type,
-                    "file_size": file_size_formatted,
-                }
-                return self._upload_repo.update(db, existing_file.id, update_payload)
-            else:
-                insert_payload = {
-                    "filename": clean_filename,
-                    "file_path": permanent_path,
-                    "file_type": file.content_type,
-                    "file_size": file_size_formatted,
-                    "user_id": user_id,
-                }
-                return self._upload_repo.create(db, insert_payload)
+                shutil.move(temp_path, permanent_path)
+
+                file_size_formatted = (
+                    f"{round(os.path.getsize(permanent_path) / 1024, 2)} KB"
+                )
+
+                existing_file = self._upload_repo.find_one(db, {"user_id": user_id})
+
+                if existing_file:
+                    if os.path.exists(existing_file.file_path):
+                        try:
+                            os.remove(existing_file.file_path)
+                        except OSError:
+                            pass
+
+                    update_payload = {
+                        "filename": clean_filename,
+                        "file_path": permanent_path,
+                        "file_type": file.content_type,
+                        "file_size": file_size_formatted,
+                    }
+                    return self._upload_repo.update(
+                        db, existing_file.id, update_payload
+                    )
+                else:
+                    insert_payload = {
+                        "filename": clean_filename,
+                        "file_path": permanent_path,
+                        "file_type": file.content_type,
+                        "file_size": file_size_formatted,
+                        "user_id": user_id,
+                    }
+                    return self._upload_repo.create(db, insert_payload)
 
         except Exception as error:
             if os.path.exists(temp_path):

@@ -1,9 +1,8 @@
 import uvicorn
 from fastapi import FastAPI
-
-# from fastapi.middleware.cors import CORSMiddleware
 from config.env.env import env
 from domains.users.user_controller import UserController
+from domains.uploadFile.upload_file_controller import UploadController
 
 
 class Router:
@@ -15,6 +14,7 @@ class Router:
 
     def _setup_routes(self):
         self.app.include_router(UserController.get_router())
+        self.app.include_router(UploadController.get_router())
 
         @self.app.get("/")
         def root():

@@ -1,70 +1,39 @@
-import os
-import uuid
+from fastapi import Depends, status, File, UploadFile
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status, UploadFile
-from domains.uploadFile.upload_file_model import UploadFileModel
-
-UPLOAD_DIR = "uploads"
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
+from config.database.db import get_db
+from common.base.baseController import BaseController
+from domains.uploadFile.upload_file_service import UploadService
+from domains.uploadFile.dto.upload_file_dto import UploadResponseDTO
 
 
-class UploadFileController:
-    @staticmethod
-    def get_all(db: Session):
-        return db.query(UploadFileModel).all()
+class UploadController(BaseController, prefix="/uploads", tags=["Secured Uploads"]):
+    _upload_service = UploadService()
 
-    @staticmethod
-    async def create(title: str, description: str, file: UploadFile, db: Session):
-        title_exists = (
-            db.query(UploadFileModel).filter(UploadFileModel.title == title).first()
-        )
-        if title_exists:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="File dengan judul ini sudah ada!",
-            )
+    @classmethod
+    def register_routes(cls):
 
-        if not file or not file.filename:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="File berkas wajib diunggah!",
-            )
+        @cls.router.post("/file/{user_id}", status_code=status.HTTP_200_OK)
+        async def secure_upload(
+            user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)
+        ):
+            try:
+                processed_file = await cls._upload_service.secure_process_file(
+                    db, user_id, file
+                )
+                response_payload = UploadResponseDTO.from_orm(processed_file)
 
-        file_ext = os.path.splitext(file.filename).lower()
-        allowed_extensions = [
-            ".jpg",
-            ".jpeg",
-            ".png",
-            ".pdf",
-            ".docx",
-        ]
+                return cls.handle_success(
+                    data=response_payload.model_dump(),
+                    message="File underwent verification scanning and was securely stored.",
+                )
+            except ValueError as error:
+                cls.handle_error(
+                    detail=str(error), status_code=status.HTTP_400_BAD_REQUEST
+                )
+            except Exception as error:
+                cls.handle_error(
+                    detail=str(error), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
-        if file_ext not in allowed_extensions:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Format file tidak didukung! Hanya diizinkan: {', '.join(allowed_extensions)}",
-            )
 
-        filename_to_save = f"{uuid.uuid4()}{file_ext}"
-        file_path = os.path.join(UPLOAD_DIR, filename_to_save)
-
-        try:
-            contents = await file.read()
-            with open(file_path, "wb") as buffer:
-                buffer.write(contents)
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Gagal menyimpan file ke penyimpanan server: {str(e)}",
-            )
-        finally:
-            await file.close()
-
-        new_file = UploadFileModel(
-            title=title, description=description, filename=filename_to_save
-        )
-        db.add(new_file)
-        db.commit()
-        db.refresh(new_file)
-        return new_file
+UploadController.register_routes()

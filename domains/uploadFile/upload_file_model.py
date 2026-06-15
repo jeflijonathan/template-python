@@ -2,19 +2,27 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from config.database.db import Base
+from common.consts.timestamps import Timestamps
+import uuid
 
 
-class UploadFileModel(Base):
-    __tablename__ = "uploaded_files"
+def generate_uuid():
+    return str(uuid.uuid4())
 
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(100), nullable=False)
-    description = Column(String(255), nullable=True)
+
+class UploadFileModel(Base, Timestamps):
+    __tablename__ = "upload_files"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, nullable=False)
     filename = Column(String(255), nullable=False)
-    uploaded_at = Column(DateTime, server_default=func.now())
-
+    file_path = Column(String(500), nullable=False)
+    file_type = Column(String(100), nullable=False)
+    file_size = Column(String(50), nullable=False)
     user_id = Column(
-        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
     )
 
-    owner = relationship("UserModel", back_populates="files")
+    owner = relationship("UserModel", back_populates="profile_image")

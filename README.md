@@ -32,40 +32,40 @@ python -m ruff check .
 pip install ruff
 ```
 
-## Input libary
-
 ## 📦 Manajemen Dependensi (pipreqs)
 
-Proyek ini menggunakan **pipreqs** untuk mengelola dan memperbarui file `requirements.txt`.
+This project uses **pipreqs** to manage and update the `requirements.txt` file.
 
-Berbeda dengan perintah `pip freeze` bawaan yang mencatat _seluruh_ package yang ada di dalam virtual environment (termasuk library _dependencies_ dari tools lain yang tidak sengaja terinstal), **pipreqs** bekerja secara pintar dengan hanya melihat kata kunci `import` yang benar-benar tertulis di dalam kode program Python Anda.
+Unlike the default `pip freeze` command, which lists all packages in the virtual environment (including library dependencies from accidentally installed tools), **pipreqs** intelligently looks only at the `import` keywords actually written in your Python code.
 
-### 📊 Perbandingan: `pip freeze` vs `pipreqs`
+### 📊 Comparison: `pip freeze` vs `pipreqs`
 
-| Fitur              | `pip freeze`                        | `pipreqs` (Proyek Ini)                         |
-| :----------------- | :---------------------------------- | :--------------------------------------------- |
-| **Cara Kerja**     | Mengosongkan isi venv ke dalam file | Memindai kode program (`import`)               |
-| **Isi File**       | Kerap membengkak (_bloated_)        | Bersih dan esensial (_clean_)                  |
-| **Efek ke Server** | Deployment lebih berat & lama       | Proses build kontainer/server jauh lebih cepat |
+| Features           | `pip freeze`                       | `pipreqs` (This Project)                   |
+| :----------------- | :--------------------------------- | :----------------------------------------- |
+| **How ​​It Works** | Emptying venv contents into a file | Scanning program code (`import`)           |
+| **File Contents**  | Often bloated                      | Clean and essential                        |
+| **Server Impact**  | Heavier & slower deployment        | Much faster container/server build process |
 
-### 🚀 Mengapa Menggunakan pipreqs?
+### 🚀 Why Use pipreqs?
 
-- **Clean & Minimalis:** File `requirements.txt` hanya berisi library utama yang benar-benar dijalankan oleh aplikasi.
-- **Ukuran Aplikasi Ringan:** Mencegah pembengkakan ukuran _image container_ (Docker) atau memori server saat deployment karena tidak ada instalasi library sampah.
-- **Pelacakan Versi Akurat:** Otomatis mendeteksi versi library yang sedang aktif digunakan di lokal komputer Anda untuk menghindari isu _production mismatch_.
+- **Clean & Minimalist:** The `requirements.txt` file only contains the core libraries that are actually used by the application.
+- **Lightweight Application Size:** Prevents bloating of container (Docker) image size or server memory during deployment because there are no unnecessary library installations.
+- **Accurate Version Tracking:** Automatically detects the currently active library version on your local machine to avoid production mismatch issues.
 
 ---
 
-### 💻 Panduan Penggunaan di Lokal
+### 💻 Local Usage Guide
 
-#### A. Bagi Developer (Update Dependensi Baru)
+#### A. For Developers (Updating New Dependencies)
 
-Jika Anda baru saja menambahkan atau menulis kode `import` baru dan ingin memperbarui daftar `requirements.txt`:
+If you've recently added or written new `import` code and want to update your `requirements.txt` list:
 
-1. **Instalasi pipreqs** (Cukup lakukan sekali di awal)
-   ```bash
-   pip install pipreqs
-   ```
+1. **Install pipreqs** (Just do it once at the start)
+
+```bash
+pip install pipreqs
+```
+
 2. **implement pipreqs**
 
 ```bash

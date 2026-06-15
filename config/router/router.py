@@ -1,6 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+
+# from fastapi.middleware.cors import CORSMiddleware
 from config.env.env import env
 from domains.users.user_controller import UserController
 

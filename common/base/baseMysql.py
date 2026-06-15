@@ -1,9 +1,9 @@
-from typing import Type, TypeVar, Generic, List, Optional, Dict, Any
+from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func, update, delete
 from config.database.db import Base
 
-ModelType = TypeVar("ModelType", bound="Base")
+ModelType = TypeVar("ModelType", bound=Base)
 
 
 class BaseMySQLService(Generic[ModelType]):
@@ -24,8 +24,8 @@ class BaseMySQLService(Generic[ModelType]):
     def find(
         self,
         db: Session,
-        filter_data: Dict[str, Any] = None,
-        paginator: Dict[str, int] = None,
+        filter_data: Optional[Dict[str, Any]] = None,
+        paginator: Optional[Dict[str, int]] = None,
     ) -> List[ModelType]:
         try:
             filter_data = filter_data or {"query": {}, "sorter": None}
@@ -40,22 +40,23 @@ class BaseMySQLService(Generic[ModelType]):
                         stmt = stmt.where(getattr(self.model, key) == value)
 
             if sorter and "sort" in sorter and "order" in sorter:
-                column = getattr(self.model, sorter["sort"])
-                if sorter["order"].lower() == "desc":
-                    stmt = stmt.order_by(column.desc())
-                else:
-                    stmt = stmt.order_by(column.asc())
+                if hasattr(self.model, sorter["sort"]):
+                    column = getattr(self.model, sorter["sort"])
+                    if str(sorter["order"]).lower() == "desc":
+                        stmt = stmt.order_by(column.desc())
+                    else:
+                        stmt = stmt.order_by(column.asc())
 
             if paginator and "limit" in paginator and "page" in paginator:
                 limit = paginator["limit"]
                 offset = limit * (paginator["page"] - 1)
                 stmt = stmt.limit(limit).offset(offset)
 
-            return db.scalars(stmt).all()
+            return list(db.scalars(stmt).all())
         except Exception as error:
             raise error
 
-    def count(self, db: Session, filter_data: Dict[str, Any] = None) -> int:
+    def count(self, db: Session, filter_data: Optional[Dict[str, Any]] = None) -> int:
         try:
             filter_data = filter_data or {"query": {}}
             query_dict = filter_data.get("query", {})
@@ -72,7 +73,7 @@ class BaseMySQLService(Generic[ModelType]):
             raise error
 
     def find_one(
-        self, db: Session, filter_data: Dict[str, Any] = None
+        self, db: Session, filter_data: Optional[Dict[str, Any]] = None
     ) -> Optional[ModelType]:
         try:
             filter_data = filter_data or {}

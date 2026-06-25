@@ -4,8 +4,10 @@ import re
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 from common.base.baseMysql import BaseMySQLService
-from domains.users.user_model import UserModel, UploadFileModel
+from domains.users.user_model import UserModel
+from domains.uploadFile.upload_file_model import UploadFileModel
 from common.utils.compressor import compress_file
+from domains.uploadFile.upload_file_repository import UploadFileRepository
 
 TEMP_DIR = "static/temp"
 UPLOAD_DIR = "static/uploads"
@@ -48,8 +50,11 @@ BANNED_EXTENSIONS = {
 
 class UploadService:
     def __init__(self):
-        self._upload_repo = BaseMySQLService(UploadFileModel)
+        self._upload_repository = UploadFileRepository()
         self._user_repo = BaseMySQLService(UserModel)
+
+    def get_all_upload_file(self, db: Session) -> list[UploadFileModel]:
+        return self._upload_repository.find_all(db)
 
     def _sanitize_filename(self, filename: str) -> str:
         base_name = os.path.basename(filename)
@@ -116,6 +121,8 @@ class UploadService:
                             "Security Violation: Malicious script injection or embedded XSS detected within file bytes."
                         )
 
+                check_buffer.seek(0)
+                file_data = check_buffer.read()
                 compression_result = compress_file(file_data, clean_filename)
 
                 if compression_result["is_compressed"]:
@@ -134,7 +141,9 @@ class UploadService:
                     f"{round(os.path.getsize(permanent_path) / 1024, 2)} KB"
                 )
 
-                existing_file = self._upload_repo.find_one(db, {"user_id": user_id})
+                existing_file = self._upload_repository.find_one(
+                    db, {"user_id": user_id}
+                )
 
                 if existing_file:
                     if os.path.exists(existing_file.file_path):

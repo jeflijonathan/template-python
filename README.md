@@ -1,9 +1,11 @@
+version python 1.11.3
+
 ## Running the Application (Development)
 
 To start the local FastAPI server with the auto-reload feature (the server automatically restarts every time a code change is made):
 
 ```bash
-uvicorn main:app --reload
+ python -m uvicorn main:router_instance.app --reload
 ```
 
 ## 🛠️ System & Installation Requirements

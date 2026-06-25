@@ -9,5 +9,6 @@ from main import router_instance
 if __name__ == "__main__":
     print("Checking and synchronizing database tables...")
     Base.metadata.create_all(bind=engine)
+    print("Database synchronization completed! 🎉")
 
     router_instance.listen()

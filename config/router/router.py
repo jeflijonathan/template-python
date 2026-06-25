@@ -3,11 +3,16 @@ from fastapi import FastAPI
 from config.env.env import env
 from domains.users.user_controller import UserController
 from domains.uploadFile.upload_file_controller import UploadController
+from config.limiter.limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 
 class Router:
     def __init__(self):
         self.app = FastAPI(title="Python API Server", version="1.0")
+        self.app.state.limiter = limiter
+        self.app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
         self.host = env.beHost
         self.port = int(env.bePort)
         self._setup_routes()
@@ -25,9 +30,8 @@ class Router:
             return {"status": "OK", "message": "Health check passed"}
 
     def listen(self):
-        """
-        Menjalankan server FastAPI menggunakan Uvicorn ASGI Server
-        (setara dengan this.app.listen() di Express)
-        """
         print(f"🚀 Server running at http://{self.host}:{self.port}")
-        uvicorn.run(self.app, host=self.host, port=self.port)
+
+        uvicorn.run(
+            "main:router_instance.app", host=self.host, port=self.port, reload=True
+        )
